@@ -3,7 +3,8 @@
   <div class="col-8 offset-2">
     <h3>Edit your Listing</h3>
 
-    <form method="post" action="/listings/<%= listing._id %>?_method=PUT">
+    <form method="post" action="/listings/<%= listing._id %>?_method=PUT" novalidate class="needs-validation">
+      
       <div class="mb-3">
         <label for="title" class="form-label">Title:</label>
         <input 
@@ -12,7 +13,9 @@
           value="<%= listing.title %>"
           type="text"
           class="form-control"
+          required
         />
+        <div class="invalid-feedback">Please provide a title.</div>
       </div>
 
       <div class="mb-3">
@@ -20,12 +23,13 @@
         <textarea 
           id="description"
           name="listing[description]" 
-          class="form-control"
+          class="form-control" required
         ><%= listing.description %></textarea>
+        <div class="invalid-feedback">Please provide a description.</div>
       </div>
 
       <div class="mb-3">
-        <label for="image" class="form-label">Image URL:</label>
+        <label for="image" class="form-label">Image URL (optional):</label>
         <input 
           id="image"
           name="listing[image][url]" 
@@ -47,7 +51,9 @@
             type="number" 
             step="0.01"
             class="form-control"
+            required
           />
+          <div class="invalid-feedback">Please provide a price.</div>
         </div>
 
         <div class="mb-3 col-md-8">
@@ -58,7 +64,9 @@
             value="<%= listing.country %>" 
             type="text" 
             class="form-control"
+            required
           />
+          <div class="invalid-feedback">Please provide a country.</div>
         </div>
       </div>
 
@@ -70,11 +78,14 @@
           value="<%= listing.location %>" 
           type="text" 
           class="form-control"
+          required
         />
+        <div class="invalid-feedback">Please provide a location.</div>
       </div>
 
-      <br />
-      <button class="btn btn-dark edit-btn mt-3">Edit</button>
+      <button class="btn btn-dark edit-btn mt-3" type="submit">Edit</button>
     </form>
   </div>
 </div>
+
+<script src="/js/script.js"></script>
