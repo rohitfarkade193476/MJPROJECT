@@ -5,13 +5,20 @@ const Listing = require('./models/listing.js');
 const path = require('path');
 const methodOverride = require("method-override");
 const ejsMate = require("ejs-mate");
-const wrapAsync = require("./utils/wrapAsync.js");
+const wrapAsync = require("./utils/wrapAsync.js");   // ✅ FIXED
 const { STATUS_CODES } = require('http');
-const  ExpressError = require('./utils/ExpressError.js');
-const {listingSchema } = require('./schema.js');
+const ExpressError = require('./utils/ExpressError.js');
+const session = require('express-session');
+const flash = require('connect-flash');
+const { listingSchema } = require('./schema.js');
 const Review = require('./models/review.js');
+const passport = require('passport');
+const LocalStrategy = require('passport-local');
+const User = require('./models/user.js');
 
 
+const listingsRouter = require("./routes/listing.js");
+const userRouter=require("./routes/user.js");
 const MONGO_URL = "mongodb://127.0.0.1:27017/wanderlust";
 
 main()
@@ -33,74 +40,54 @@ app.use(methodOverride("_method"));
 app.engine("ejs", ejsMate);
 app.use(express.static(path.join(__dirname, "public")));
 
+const sessionOptions={
+  secret:"mysupersecretcode",
+  resave: false,
+  saveUninitialized: true,
+  cookie:{
+    expires: new Date(Date.now() + 7 * 24 * 60 * 1000) ,
+    maxAge:7 * 24 * 60 * 60 * 1000,
+    httpOnly: true,
+  }
+}
+
 app.get("/", (req, res) => {
   res.send("Hi, I am root");
 });
 
-//index route
-app.get("/listings", wrapAsync(async (req, res) => {
-  const allListings = await Listing.find({});
-  res.render("listings/index.ejs", { allListings });
-}));
+app.use(session(sessionOptions)); 
+app.use(flash());
 
-//new route
-app.get("/listings/new", (req, res) => {
-  res.render("listings/new.ejs");
+app.use(passport.initialize());
+app.use(passport.session());
+passport.use(new LocalStrategy(User.authenticate()));
+
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser());
+
+app.use((req, res, next) => {
+  res.locals.success = req.flash("success");
+  res.locals.error = req.flash("error");
+  next();
 });
 
-//show route
-app.get("/listings/:id", wrapAsync(async (req, res) => {
-  let { id } = req.params;
-  const listing = await Listing.findById(id);
-  res.render("listings/show.ejs", { listing });
-}));
+// Login route
+// app.get("/demouser", async(req, res) => {
+//   let fakeUser=new User({
+//     email: "student@gmail.com",
+//     username: "delta-student",
+//   })
+//   let registeredUser=await User.register(fakeUser, "helloworld");
+//   res.send(registeredUser);
+// });
 
-//Create Route
-app.post("/listings", 
-  wrapAsync(async (req, res, next) =>{
-  let result =  listingSchema.validate(req.body);
-  console.log(result); 
-  const newListing = new Listing(req.body.listing);
-  await newListing.save();
-  res.redirect("/listings");
-})
-);
 
-//Edit Route
-app.get("/listings/:id/edit", wrapAsync(async (req, res) => {
-  let { id } = req.params;
-  let listing = await Listing.findById(id);
-  res.render("listings/edit", { listing });
-}));
 
-//Update Route from problem solver
-app.put("/listings/:id", wrapAsync(async (req, res) => {
-  let { id } = req.params;
-  let updatedData = req.body.listing;
+app.use("/listings", listingsRouter);
+app.use("/", userRouter);
 
-  // Get old listing from DB
-  let oldListing = await Listing.findById(id);
-
-  // If no new URL provided, keep old image object
-  if (!updatedData.image || !updatedData.image.url || updatedData.image.url.trim() === "") {
-    updatedData.image = oldListing.image;
-  }
-
-  await Listing.findByIdAndUpdate(id, updatedData);
-  res.redirect(`/listings/${id}`);
-}));
-
-//Delete Route
-app.delete("/listings/:id", wrapAsync(async (req, res) => {
-  let { id } = req.params;
-  let deletedListing = await Listing.findByIdAndDelete(id);
-  console.log(deletedListing);
-  res.redirect("/listings");
-}));
-
-//Review
-//post route
-app.post("/listings/:id/reviews",async (req, res) => {
+// Review post route
+app.post("/listings/:id/reviews", async (req, res) => {
   let listing = await Listing.findById(req.params.id);
   let newReview = new Review(req.body.review);
 
@@ -113,6 +100,5 @@ app.post("/listings/:id/reviews",async (req, res) => {
 });
 
 app.listen(8080, () => {
-  console.log("Server liseting on port 8080");
+  console.log("Server listening on port 8080");
 });
-
